@@ -1,5 +1,5 @@
-let CACHE_STATIC_NAME = 'static-v7'
-let CACHE_DYNAMIC_NAME = 'dynamic-v2'
+let CACHE_STATIC_NAME = 'static-v9'
+let CACHE_DYNAMIC_NAME = 'dynamic-v3'
 
 self.addEventListener('install', function(event) {
   // console.log('[Service Worker] Installing Service Worker ...', event);
@@ -12,6 +12,7 @@ self.addEventListener('install', function(event) {
       cache.addAll([
         '/',
         '/index.html',
+        '/offline.html',
         '/src/js/app.js',
         '/src/js/feed.js',
         '/src/js/fetch.js',
@@ -57,12 +58,17 @@ self.addEventListener('fetch', function(event) {
             .then(function (res) {
               // store into cache and return it to original response
               return caches.open(CACHE_DYNAMIC_NAME)
-              .then(function (cache) {
-                cache.put(event.request.url, res.clone()) // response only can be used once, so you need to clone()
-                return res
-              })
+                .then(function (cache) {
+                  cache.put(event.request.url, res.clone()) // response only can be used once, so you need to clone()
+                  return res
+                })
             })
             .catch(function (err) {
+              // if page is not cached, show offline.html page
+              return caches.open(CACHE_STATIC_NAME)
+                .then((cache) => {
+                  return cache.match('/offline.html')
+                })
             })
         }
       })
