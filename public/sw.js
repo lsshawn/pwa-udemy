@@ -1,9 +1,11 @@
+let CACHE_STATIC_NAME = 'static-v4'
+let CACHE_DYNAMIC_NAME = 'dynamic-v2'
 
 self.addEventListener('install', function(event) {
   // console.log('[Service Worker] Installing Service Worker ...', event);
   event.waitUntil(
     // Pre-caching
-    caches.open('static') // any cache name
+    caches.open(CACHE_STATIC_NAME) // any cache name. Use versioning forces a SW change, thus using a new cache.
     .then(function (cache) {
       console.log('[Service Worker] Precaching App Shell')
       // you're caching URLS for app shell
@@ -26,7 +28,19 @@ self.addEventListener('install', function(event) {
 });
 
 self.addEventListener('activate', function(event) {
-  // console.log('[Service Worker] Activating Service Worker ....', event);
+  console.log('[Service Worker] Activating Service Worker ....', event);
+  event.waitUntil(
+    caches.keys()
+      .then(function (keyList) {
+        return Promise.all(keyList.map(function (key) {
+          // clean up cache if cache name is not the latest
+          if (key !== CACHE_STATIC_NAME && key !== CACHE_DYNAMIC_NAME) {
+            console.log('[Service Worker] Removing old cache', key)
+            return caches.delete(key)
+          }
+        }));
+      })
+  );
   return self.clients.claim();
 });
 
@@ -42,11 +56,13 @@ self.addEventListener('fetch', function(event) {
           return fetch(event.request)
             .then(function (res) {
               // store into cache and return it to original response
-              return caches.open('dynamic')
+              return caches.open(CACHE_DYNAMIC_NAME)
               .then(function (cache) {
                 cache.put(event.request.url, res.clone()) // response only can be used once, so you need to clone()
                 return res
               })
+            })
+            .catch(function (err) {
             })
         }
       })
