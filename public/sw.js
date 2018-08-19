@@ -37,8 +37,17 @@ self.addEventListener('fetch', function(event) {
       .then(function (response) {
         if (response) {
           return response;
+        // if we don't find the item in the cache
         } else {
-          return fetch(event.request);
+          return fetch(event.request)
+            .then(function (res) {
+              // store into cache and return it to original response
+              return caches.open('dynamic')
+              .then(function (cache) {
+                cache.put(event.request.url, res.clone()) // response only can be used once, so you need to clone()
+                return res
+              })
+            })
         }
       })
   );
