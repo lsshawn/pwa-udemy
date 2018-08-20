@@ -43,6 +43,12 @@ function onSaveButtonClicked (event) {
   }
 }
 
+function clearCard () {
+  while(sharedMomentsArea.hasChildNodes()) {
+    sharedMomentsArea.removeChild(sharedMomentsArea.lastChild)
+  }
+}
+
 function createCard() {
   var cardWrapper = document.createElement('div');
   cardWrapper.className = 'shared-moment-card mdl-card mdl-shadow--2dp';
@@ -72,10 +78,41 @@ function createCard() {
   sharedMomentsArea.appendChild(cardWrapper);
 }
 
-fetch('https://httpbin.org/get')
-  .then(function(res) {
+// cache then network strategy
+let url = 'https://httpbin.org/post'
+let networkDataReceived = false
+
+fetch(url, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  body: JSON.stringify({
+    message: 'Some message'
+  })
+})
+  .then(function (res) {
     return res.json();
   })
-  .then(function(data) {
-    createCard();
+  .then(function (data) {
+    networkDataReceived = true
+    console.log('From web ', data)
+    clearCards()
+    createCard()
   });
+
+if ('caches' in window) {
+  caches.match(url)
+    .then((response) => {
+      if (response) {
+        return response.json()
+      }
+    })
+    .then((data) => {
+      console.log('From cache ', data)
+      if (!networkDataReceived) {
+        createCard()
+      }
+    })
+}
