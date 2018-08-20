@@ -98,7 +98,7 @@ fetch(url, {
   .then(function (data) {
     networkDataReceived = true
     console.log('From web ', data)
-    clearCards()
+    clearCard()
     createCard()
   });
 
