@@ -1,5 +1,5 @@
-let CACHE_STATIC_NAME = 'static-v12'
-let CACHE_DYNAMIC_NAME = 'dynamic-v12'
+let CACHE_STATIC_NAME = 'static-v13'
+let CACHE_DYNAMIC_NAME = 'dynamic-v13'
 
 let STATIC_FILES = [
   '/',
