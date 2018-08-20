@@ -1,5 +1,8 @@
-let CACHE_STATIC_NAME = 'static-v13'
-let CACHE_DYNAMIC_NAME = 'dynamic-v13'
+importScripts('/src/js/idb.js')
+importScripts('/src/js/utility.js')
+
+let CACHE_STATIC_NAME = 'static-v16'
+let CACHE_DYNAMIC_NAME = 'dynamic-v16'
 
 let STATIC_FILES = [
   '/',
@@ -8,6 +11,7 @@ let STATIC_FILES = [
   '/src/js/app.js',
   '/src/js/feed.js',
   '/src/js/fetch.js',
+  '/src/js/idb.js',
   '/src/js/material.min.js',
   '/src/css/app.css',
   '/src/css/feed.css',
@@ -78,17 +82,23 @@ self.addEventListener('fetch', function(event) {
   // different caching strategy for different URL
   if (event.request.url.indexOf(url) > -1) {
     event.respondWith(
-      caches.open(CACHE_DYNAMIC_NAME)
-        .then((cache) => {
-          // intercept fetch request in all other JS files.
-          return fetch(event.request)
-            .then((res) => {
-                
-              cache.put(event.request, res.clone())
-              return res
+      // intercept fetch request in all other JS files.
+      fetch(event.request)
+        .then((res) => {
+          let clonedRes = res.clone()
+          // clear storage before repopulate
+          clearAllData('posts')
+            .then(() => {
+              return clonedRes.json()
+            })          
+            .then((data) => {
+              for (var key in data) {
+                writeData('posts', data[key])
+              }
             })
+          return res
         })
-    );
+    )
   } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(
       caches.match(event.request)
