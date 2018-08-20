@@ -17,18 +17,18 @@ let STATIC_FILES = [
   'https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css'
 ]
 
-function trimCache(cacheName, maxItems) {
-  caches.open(cacheName)
-    .then((cache) => {
-      return cache.keys()
-        .then((keys) => {
-          if (keys.length > maxItems) {
-            cache.delete(keys[0])
-              .then(trimCache(cacheName, maxItems))
-          }
-        })
-    })
-}
+// function trimCache(cacheName, maxItems) {
+//   caches.open(cacheName)
+//     .then((cache) => {
+//       return cache.keys()
+//         .then((keys) => {
+//           if (keys.length > maxItems) {
+//             cache.delete(keys[0])
+//               .then(trimCache(cacheName, maxItems))
+//           }
+//         })
+//     })
+// }
 
 self.addEventListener('install', function(event) {
   // console.log('[Service Worker] Installing Service Worker ...', event);
@@ -72,7 +72,7 @@ function isInArray (str, array) {
 
 // cache then network
 self.addEventListener('fetch', function(event) {
-  let url = 'https://httpbin.org/get'
+  let url = 'https://pwagram-2b678.firebaseio.com/posts.json'
 
   // only use this strategy for this URL.
   // different caching strategy for different URL
@@ -106,7 +106,7 @@ self.addEventListener('fetch', function(event) {
               // store into cache and return it to original response
               return caches.open(CACHE_DYNAMIC_NAME)
                 .then(function (cache) {
-                  trimCache(CACHE_DYNAMIC_NAME, 3)
+                  // trimCache(CACHE_DYNAMIC_NAME, 3)
                   cache.put(event.request.url, res.clone()) // response only can be used once, so you need to clone()
                   return res
                 })
