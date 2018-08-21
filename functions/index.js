@@ -1,33 +1,54 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin')
-const cors = require('cors')({ origin: true})
+var functions = require('firebase-functions');
+var admin = require('firebase-admin');
+var cors = require('cors')({
+  origin: true
+});
+var webpush = require('web-push');
 
 // // Create and Deploy Your First Cloud Functions
 // // https://firebase.google.com/docs/functions/write-firebase-functions
+//
 
-var serviceAccount = require("./pwagram-fb-key.json")
+var serviceAccount = require("./pwagram-fb-key.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://pwagram-2b678.firebaseio.com/'
-})
+});
 
-exports.storePostData = functions.https.onRequest((request, response) => {
-  cors(request, response, () => {
+exports.storePostData = functions.https.onRequest(function (request, response) {
+  cors(request, response, function () {
     admin.database().ref('posts').push({
-      id: request.body.id,
-      titla: request.body.title,
-      location: request.body.location,
-      image: request.body.image
-    })
-    .then(() => {
-      reponse.status(201).json({
-        message: 'Data stored', 
-        id: request.body.id
+        id: request.body.id,
+        title: request.body.title,
+        location: request.body.location,
+        image: request.body.image
       })
+      .then(function () {
+        webpush.setVapidDetails('mailto: l@sshawn.com',
+          'BC2pieAYRWKhwtKzs5IqCnT1S0QQ0sxcPCZHX-btiwA8yyiSz6O31rUsSsTBN4WwGkBL3yoeimaIOuJg3JY6Nac',
+          'Kv_Dg8poM0rcRQQJOH0YZwDFW9tm3-JWIIaGFjCah-c')
+        return admin.database().ref('subscriptions').once('value');
+      })
+      .then(function (subscriptions) {
+      subscriptions.forEach(function (sub) {
+        var pushConfig = {
+          endpoint: sub.val().endpoint,
+          keys: {
+            auth: sub.val().keys.auth,
+            p256dh: sub.val().keys.p256dh
+          }
+        };
+
+        webpush.sendNotification(pushConfig, JSON.stringify({title: 'New Post', content: 'New Post added!'}))
+          .catch(function(err) {
+            console.log(err);
+          })
+      });
+      response.status(201).json({message: 'Data stored', id: request.body.id});
     })
-    .catch((err) => {
-      response.status(500).json({ error: err })
-    })
-  })
+    .catch(function (err) {
+      response.status(500).json({error: err});
+    });
+  });
 });
