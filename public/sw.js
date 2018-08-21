@@ -232,6 +232,23 @@ self.addEventListener('notificationclick', (event) => {
     notification.close()
   } else {
     console.log(action)
+    event.waitUntil(
+      clients.matchAll()
+        .then((clis) => {
+          // find windows managed by the service worker
+          let client = clis.find((c) => {
+            return c.visibilityState === 'visible'
+          })
+
+          if (client !== undefined) {
+            client.navigate('http://localhost:8080')
+            client.focus()
+          } else {
+            clients.openWindow('http://localhost:8080')
+          }
+          notification.close()
+        })
+    )
     notification.close()
   }
 })
@@ -239,3 +256,26 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('notificationclose', (event) => {
   console.log(`Notification was closed ${event}`)
 })
+
+self.addEventListener('push', function (event) {
+  console.log('Push Notification received', event);
+
+  var data = {
+    title: 'New!',
+    content: 'Something new happened!'
+  };
+
+  if (event.data) {
+    data = JSON.parse(event.data.text());
+  }
+
+  var options = {
+    body: data.content,
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png'
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
