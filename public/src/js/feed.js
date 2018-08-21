@@ -2,8 +2,14 @@ var shareImageButton = document.querySelector('#share-image-button');
 var createPostArea = document.querySelector('#create-post');
 var closeCreatePostModalButton = document.querySelector('#close-create-post-modal-btn');
 var sharedMomentsArea = document.querySelector('#shared-moments');
+let form = document.querySelector('form')
+let titleInput = document.querySelector('#title')
+let locationInput = document.querySelector('#location')
+let url = 'https://us-central1-pwagram-2b678.cloudfunctions.net/storePostData'
+let networkDataReceived = false
 
 function openCreatePostModal() {
+  console.log('clicked')
   createPostArea.style.display = 'block';
   setTimeout(() => {
     createPostArea.style.transform = 'translateY(0)'
@@ -93,9 +99,6 @@ function createCard(data) {
   sharedMomentsArea.appendChild(cardWrapper);
 }
 
-// cache then network strategy
-let url = 'https://pwagram-2b678.firebaseio.com/posts.json'
-let networkDataReceived = false
 
 function updateUI (data) {
   clearCard()
@@ -127,3 +130,59 @@ if ('indexedDB' in window) {
       }
     })
 }
+
+function sendData () {
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      id: new Date().toISOString(),
+      title: titleInput.value,
+      location: locationInput.value,
+      image: 'https://firebasestorage.googleapis.com/v0/b/pwagram-2b678.appspot.com/o/minimal_wallpapers_5.png?alt=media&token=3af52138-178e-4240-862f-ac9be35409ad'
+    })
+  })
+  .then((res) => {
+    console.log('Sent Data ', res)
+    updateUI()
+  })
+}
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault()
+  if (titleInput.value.trim() === '' || locationInput.value.trim() === '') {
+    alert('Plese enter valid data')
+    return
+  }
+
+  closeCreatePostModal()
+
+  // SyncManager is the API for background sync
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    navigator.serviceWorker.ready
+      .then((sw) => {
+        let post = {
+          id: new Date().toISOString(),
+          title: titleInput.value,
+          location: locationInput.value
+        }
+        // store into indexDB
+        writeData('sync-posts', post)
+          .then(() => {
+            sw.sync.register('sync-new-posts')
+          })
+          .then(() => {
+            let snackbarContainer = document.querySelector('#confirmation-toast')
+            let data = { message: 'Your post was saved for syncing' }
+            snackbarContainer.MaterialSnackbar.showSnackbar(data)
+          })
+          .catch((err) => console.log(err))
+      })
+  // if browser doesn't support Service Worker or SyncManager
+  } else {
+    sendData()
+  }
+})

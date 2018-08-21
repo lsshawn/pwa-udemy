@@ -1,8 +1,9 @@
 importScripts('/src/js/idb.js')
 importScripts('/src/js/utility.js')
 
-let CACHE_STATIC_NAME = 'static-v19'
-let CACHE_DYNAMIC_NAME = 'dynamic-v19'
+let CACHE_STATIC_NAME = 'static-v22'
+let CACHE_DYNAMIC_NAME = 'dynamic-v22 '
+let url = 'https://us-central1-pwagram-2b678.cloudfunctions.net/storePostData'
 
 let STATIC_FILES = [
   '/',
@@ -76,7 +77,6 @@ function isInArray (str, array) {
 
 // cache then network
 self.addEventListener('fetch', function(event) {
-  let url = 'https://pwagram-2b678.firebaseio.com/posts.json'
 
   // only use this strategy for this URL.
   // different caching strategy for different URL
@@ -211,3 +211,45 @@ self.addEventListener('fetch', function(event) {
 //         })
 //     })
 // }) 
+
+// fired where re-establish connectivity
+self.addEventListener('sync', (event) => {
+  console.log('[Service Worker] Background syncing', event)
+
+  if (event.tag === 'sync-new-posts') {
+    console.log('[Service Worker] Syncing new posts')
+
+    event.waitUntil(
+      readAllData('sync-posts')
+        .then((data) => {
+          for (let dt of data) {
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                  id: dt.id,
+                  title: dt.title,
+                  location: dt.location,
+                  image: `'https://firebasestorage.googleapis.com/v0/b/pwagram-2b678.appspot.com/o/minimal_wallpapers_5.png?alt=media&token=3af52138-178e-4240-862f-ac9be35409ad'`
+                })
+              })
+              .then((res) => {
+                console.log('Sent Data ', res)
+                if (res.ok) {
+                  res.json()
+                    .then((resData) => {
+                      deleteItemFromData('sync-posts', resData.id) // not working yet. Only clearing the latest ID.
+                    })
+                }
+              })
+              .catch((err) => {
+                console.log('Error while sending data ', err)
+              })
+          }
+        })
+    )
+  }
+})
