@@ -5,7 +5,7 @@ var sharedMomentsArea = document.querySelector('#shared-moments');
 let form = document.querySelector('form')
 let titleInput = document.querySelector('#title')
 let locationInput = document.querySelector('#location')
-let url = 'https://us-central1-pwagram-2b678.cloudfunctions.net/storePostData'
+const url = `https://pwagram-2b678.firebaseio.com/posts.json`
 let networkDataReceived = false
 
 function openCreatePostModal() {
@@ -132,7 +132,7 @@ if ('indexedDB' in window) {
 }
 
 function sendData () {
-  fetch(url, {
+  fetch('https://us-central1-pwagram-2b678.cloudfunctions.net/storePostData', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
