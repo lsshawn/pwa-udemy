@@ -1,14 +1,15 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
 
-var CACHE_STATIC_NAME = 'static-v34';
-var CACHE_DYNAMIC_NAME = 'dynamic-v34';
+var CACHE_STATIC_NAME = 'static-v40';
+var CACHE_DYNAMIC_NAME = 'dynamic-v40';
 var STATIC_FILES = [
   '/',
   '/index.html',
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/utility.js',
   '/src/js/idb.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
@@ -189,18 +190,18 @@ self.addEventListener('sync', function (event) {
       readAllData('sync-posts')
       .then(function (data) {
         for (var dt of data) {
+          let postData = new FormData()
+          postData.append('id', dt.id)
+          postData.append('title', dt.title)
+          postData.append('location', dt.location)
+          postData.append('file', dt.picture, dt.id + '.png')
+          postData.append('rawLocationLat', dt.rawLocation.lat)
+          postData.append('rawLocationLng', dt.rawLocation.lng)
+          
+
           fetch('https://us-central1-pwagram-2b678.cloudfunctions.net/storePostData', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              body: JSON.stringify({
-                id: dt.id,
-                title: dt.title,
-                location: dt.location,
-                image: 'https://firebasestorage.googleapis.com/v0/b/pwagram-2b678.appspot.com/o/minimal_wallpapers_5.png?alt=media&token=3af52138-178e-4240-862f-ac9be35409ad'
-              })
+              body: postData
             })
             .then(function (res) {
               console.log('Sent data', res);
