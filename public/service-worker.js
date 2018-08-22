@@ -49,6 +49,34 @@ workboxSW.router.registerRoute(
   }
 )
 
+// fallback
+workboxSW.router.registerRoute((routeData) => {
+  return (routeData.event.request.headers.get('accept').includes('text/html'))
+}, (args) => {
+    return caches.match(args.event.request)
+      .then(function (response) {
+        if (response) {
+          return response;
+        } else {
+          return fetch(args.event.request)
+            .then(function (res) {
+              return caches.open('dynamic')
+                .then(function (cache) {
+                  cache.put(args.event.request.url, res.clone());
+                  return res;
+                })
+            })
+            .catch(function (err) {
+              return caches.match('/offline.html')
+                .then(function (res) {
+                  return res
+                });
+            });
+        }
+      })
+  }
+)
+
 workboxSW.precache([
   {
     "url": "favicon.ico",
@@ -68,7 +96,7 @@ workboxSW.precache([
   },
   {
     "url": "service-worker.js",
-    "revision": "98f98362447000d7188f6bc4514ed17f"
+    "revision": "7160efdd8b2925084744063cd0f9109e"
   },
   {
     "url": "src/css/app.css",
@@ -112,7 +140,7 @@ workboxSW.precache([
   },
   {
     "url": "sw-base.js",
-    "revision": "e30866566efc35921f7a6608bc695dca"
+    "revision": "db15ee75f98769f8e0fdba4351e0492c"
   },
   {
     "url": "sw.js",
