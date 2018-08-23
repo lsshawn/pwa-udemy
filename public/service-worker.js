@@ -84,7 +84,7 @@ workboxSW.precache([
   },
   {
     "url": "index.html",
-    "revision": "481c0fd6ac642a35d31832b9714c4bc4"
+    "revision": "62884ba0088601b88b72afbd3b58f2e0"
   },
   {
     "url": "manifest.json",
@@ -93,10 +93,6 @@ workboxSW.precache([
   {
     "url": "offline.html",
     "revision": "635d7ca28c2520423fd8d335609718ca"
-  },
-  {
-    "url": "service-worker.js",
-    "revision": "7160efdd8b2925084744063cd0f9109e"
   },
   {
     "url": "src/css/app.css",
@@ -109,46 +105,6 @@ workboxSW.precache([
   {
     "url": "src/css/help.css",
     "revision": "1c6d81b27c9d423bece9869b07a7bd73"
-  },
-  {
-    "url": "src/js/app.js",
-    "revision": "1644f95ddcb9c6dad6c056289922ee8f"
-  },
-  {
-    "url": "src/js/feed.js",
-    "revision": "fd74a651ce3323c5e13a7c2a02a7c5e3"
-  },
-  {
-    "url": "src/js/fetch.js",
-    "revision": "6b82fbb55ae19be4935964ae8c338e92"
-  },
-  {
-    "url": "src/js/idb.js",
-    "revision": "017ced36d82bea1e08b08393361e354d"
-  },
-  {
-    "url": "src/js/material.min.js",
-    "revision": "713af0c6ce93dbbce2f00bf0a98d0541"
-  },
-  {
-    "url": "src/js/promise.js",
-    "revision": "10c2238dcd105eb23f703ee53067417f"
-  },
-  {
-    "url": "src/js/utility.js",
-    "revision": "9778d39e7fa97be9cb228dc89e7350f6"
-  },
-  {
-    "url": "sw-base.js",
-    "revision": "db15ee75f98769f8e0fdba4351e0492c"
-  },
-  {
-    "url": "sw.js",
-    "revision": "6423066445f842757ca1fb2fdf3ead95"
-  },
-  {
-    "url": "workbox-sw.prod.v2.1.3.js",
-    "revision": "a9890beda9e5f17e4c68f42324217941"
   },
   {
     "url": "src/images/main-image-lg.jpg",
@@ -165,5 +121,109 @@ workboxSW.precache([
   {
     "url": "src/images/sf-boat.jpg",
     "revision": "0f282d64b0fb306daf12050e812d6a19"
+  },
+  {
+    "url": "src/js/material.min.js",
+    "revision": "713af0c6ce93dbbce2f00bf0a98d0541"
   }
 ])
+
+self.addEventListener('sync', function (event) {
+  console.log('[Service Worker] Background syncing', event);
+  if (event.tag === 'sync-new-posts') {
+    console.log('[Service Worker] Syncing new Posts');
+    event.waitUntil(
+      readAllData('sync-posts')
+      .then(function (data) {
+        for (var dt of data) {
+          var postData = new FormData();
+          postData.append('id', dt.id);
+          postData.append('title', dt.title);
+          postData.append('location', dt.location);
+          postData.append('rawLocationLat', dt.rawLocation.lat);
+          postData.append('rawLocationLng', dt.rawLocation.lng);
+          postData.append('file', dt.picture, dt.id + '.png');
+
+          fetch('https://us-central1-pwagram-99adf.cloudfunctions.net/storePostData', {
+              method: 'POST',
+              body: postData
+            })
+            .then(function (res) {
+              console.log('Sent data', res);
+              if (res.ok) {
+                res.json()
+                  .then(function (resData) {
+                    deleteItemFromData('sync-posts', resData.id);
+                  });
+              }
+            })
+            .catch(function (err) {
+              console.log('Error while sending data', err);
+            });
+        }
+
+      })
+    );
+  }
+});
+
+self.addEventListener('notificationclick', function (event) {
+  var notification = event.notification;
+  var action = event.action;
+
+  console.log(notification);
+
+  if (action === 'confirm') {
+    console.log('Confirm was chosen');
+    notification.close();
+  } else {
+    console.log(action);
+    event.waitUntil(
+      clients.matchAll()
+      .then(function (clis) {
+        var client = clis.find(function (c) {
+          return c.visibilityState === 'visible';
+        });
+
+        if (client !== undefined) {
+          client.navigate(notification.data.url);
+          client.focus();
+        } else {
+          clients.openWindow(notification.data.url);
+        }
+        notification.close();
+      })
+    );
+  }
+});
+
+self.addEventListener('notificationclose', function (event) {
+  console.log('Notification was closed', event);
+});
+
+self.addEventListener('push', function (event) {
+  console.log('Push Notification received', event);
+
+  var data = {
+    title: 'New!',
+    content: 'Something new happened!',
+    openUrl: '/'
+  };
+
+  if (event.data) {
+    data = JSON.parse(event.data.text());
+  }
+
+  var options = {
+    body: data.content,
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png',
+    data: {
+      url: data.openUrl
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
